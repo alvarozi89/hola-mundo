@@ -10,33 +10,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Descarga del código
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2. Configura Node (ajusta la versión según tu proyecto;
-      #    si usas Angular 15 o 16, normalmente Node 16 o 18 van bien).
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
-          # O '18', si prefieres una versión más reciente
+          # Aquí asegúrate de usar la versión mínima requerida
+          # (por ejemplo, 18.x, 20, etc.)
+          node-version: '20'
 
-      # 3. Instala dependencias con npm ci (requiere que package-lock.json exista en la raíz)
-      #    Si prefieres usar npm install en lugar de npm ci, cámbialo.
       - name: Install dependencies
         run: npm ci
+        # o "npm install", pero "npm ci" es preferible en CI/CD
 
-      # 4. Compila el proyecto de Angular
-      #    - Si usas Angular 12 o anterior, "ng build --prod" funciona.
-      #    - En Angular 13+, "ng build --configuration production" es la forma recomendada.
-      #    - También puedes usar "npm run build" si tienes un script "build": "ng build --prod" en tu package.json
       - name: Build Angular project
-        run: npx ng build
-        # O, si tu Angular es más reciente:
-        # run: npx ng build --configuration production
+        # Si tienes @angular/cli como dependencia local, usa npx
+        run: npx ng build --prod
+        # O con scripts de package.json: npm run build -- --prod
 
-      # 5. Sube los archivos resultantes al servidor mediante SCP
       - name: Upload build artifacts via SCP
         uses: appleboy/scp-action@master
         with:
@@ -44,10 +36,9 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: 22
-          source: "dist/hola-mundo/browser/*"  # Ajusta la ruta a la carpeta de tu build final
+          source: "dist/hola-mundo/browser/*"
           target: "${{ secrets.REMOTE_PATH }}"
 
-      # 6. Ejecuta comandos en tu servidor remoto por SSH
       - name: Run remote commands to deploy via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -56,7 +47,6 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 22
           script: |
-            # Ajusta estos comandos según tu ruta de despliegue
             sudo rm -rf /var/www/html/*
             sudo cp -r /home/ubuntu/browser/* /var/www/html/
             sudo systemctl restart nginx
