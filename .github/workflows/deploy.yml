@@ -8,13 +8,13 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       # 1. Descarga del código
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2. Configura Node (ajusta la versión según tu proyecto; 
+      # 2. Configura Node (ajusta la versión según tu proyecto;
       #    si usas Angular 15 o 16, normalmente Node 16 o 18 van bien).
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -32,8 +32,8 @@ jobs:
       #    - En Angular 13+, "ng build --configuration production" es la forma recomendada.
       #    - También puedes usar "npm run build" si tienes un script "build": "ng build --prod" en tu package.json
       - name: Build Angular project
-        run: npx ng build --prod
-        # O, si tu Angular es más reciente: 
+        run: npx ng build
+        # O, si tu Angular es más reciente:
         # run: npx ng build --configuration production
 
       # 5. Sube los archivos resultantes al servidor mediante SCP
