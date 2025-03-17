@@ -36,8 +36,9 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: 22
-          source: "dist/hola-mundo/browser/*"
-          target: "/var/www/html/"
+          source: "dist/hola-mundo/*"
+          target: "${{ secrets.REMOTE_PATH }}"
+
 
       - name: Run remote commands to deploy via SSH
         uses: appleboy/ssh-action@master
