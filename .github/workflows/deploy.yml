@@ -18,18 +18,18 @@ jobs:
         with:
           node-version: '20'
 
-      # 🔥 Limpieza y reinstalación de dependencias
+      # 🔥 Limpiar y reinstalar dependencias
       - name: Clean and install dependencies
         run: |
           rm -rf node_modules package-lock.json
           npm install --legacy-peer-deps
           npm install -g @angular/cli
 
-      # 🔥 Construcción del proyecto Angular
+      # 🔥 Construir la aplicación Angular
       - name: Build Angular project
         run: npx ng build --configuration production
 
-      # 🔥 Subir artefactos por SCP a la instancia EC2
+      # 🔥 Subir los archivos generados al servidor EC2
       - name: Upload build artifacts via SCP
         uses: appleboy/scp-action@master
         with:
@@ -37,10 +37,10 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: 22
-          source: "dist/hola-mundo/browser/*"
-          target: "${{ secrets.REMOTE_PATH }}"
+          source: "dist/hola-mundo/"
+          target: "${{ secrets.REMOTE_PATH }}/"
 
-      # 🔥 Configurar el servidor y aplicar permisos automáticamente
+      # 🔥 Copiar archivos al directorio correcto, corregir permisos y reiniciar Nginx
       - name: Run remote commands to deploy via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -49,15 +49,8 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 22
           script: |
-            # Mover archivos desde la carpeta generada a /var/www/html/
-            sudo cp -r /var/www/html/dist/hola-mundo/browser/* /var/www/html/
-
-            # Eliminar carpeta dist innecesaria
-            sudo rm -rf /var/www/html/dist
-
-            # Aplicar permisos correctos
+            sudo rm -rf /var/www/html/*
+            sudo cp -r ${{ secrets.REMOTE_PATH }}/dist/hola-mundo/browser/* /var/www/html/
             sudo chown -R www-data:www-data /var/www/html/
             sudo chmod -R 755 /var/www/html/
-
-            # Reiniciar Nginx para aplicar los cambios
             sudo systemctl restart nginx
