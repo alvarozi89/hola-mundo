@@ -18,18 +18,18 @@ jobs:
         with:
           node-version: '20'
 
-      # 🔥 Limpiar dependencias viejas y reinstalar correctamente
+      # 🔥 Limpiar e instalar dependencias correctamente
       - name: Clean and install dependencies
         run: |
           rm -rf node_modules package-lock.json
           npm install --legacy-peer-deps
           npm install -g @angular/cli
 
-      # 🔥 Construir Angular asegurando que los archivos se generen correctamente
+      # 🔥 Construir Angular asegurando la generación correcta de archivos
       - name: Build Angular project
         run: npx ng build --configuration production
 
-      # 🔥 Subir SOLO los archivos generados SIN carpetas adicionales
+      # 🔥 Subir el contenido generado directamente a la instancia EC2
       - name: Upload build artifacts via SCP
         uses: appleboy/scp-action@master
         with:
@@ -38,9 +38,9 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 22
           source: "dist/hola-mundo/browser/*"
-          target: "/home/ubuntu/deploy"
+          target: "/home/ubuntu/deploy/"
 
-      # 🔥 Copiar los archivos en la carpeta correcta y reiniciar Nginx
+      # 🔥 Copiar los archivos a la carpeta correcta y reiniciar Nginx
       - name: Run remote commands to deploy via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -49,24 +49,19 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 22
           script: |
-            # Verificar que los archivos llegaron
             echo "📂 Verificando archivos en /home/ubuntu/deploy/"
             ls -lah /home/ubuntu/deploy/
 
-            # Borrar archivos antiguos sin eliminar la carpeta principal
             echo "🗑 Limpiando /var/www/html/..."
-            sudo find /var/www/html/ -mindepth 1 -delete
+            sudo rm -rf /var/www/html/*
 
-            # Copiar los nuevos archivos al directorio web
-            echo "🚀 Copiando archivos a /var/www/html/"
+            echo "🚀 Moviendo archivos a /var/www/html/"
             sudo cp -r /home/ubuntu/deploy/* /var/www/html/
 
-            # Ajustar permisos (por si acaso)
             echo "🔑 Ajustando permisos en /var/www/html/"
             sudo chown -R www-data:www-data /var/www/html/
             sudo chmod -R 755 /var/www/html/
 
-            # Reiniciar Nginx para aplicar cambios
             echo "🔄 Reiniciando Nginx..."
             sudo systemctl restart nginx
 
