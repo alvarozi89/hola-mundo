@@ -32,7 +32,7 @@ jobs:
       # ng build --configuration production
       # (o simplemente ng build si no usas configs especiales)
       - name: Build Angular project
-        run: ng build
+        run: npx ng build
 
       # Sube artefactos por SCP a tu servidor.
       # Ajusta la ruta "dist/hola-mundo/browser/*" si tu build genera otra carpeta.
