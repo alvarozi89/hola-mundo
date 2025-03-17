@@ -2,47 +2,63 @@ name: Deploy Angular to EC2
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: 📦 Setup Node.js 20
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20.x'
+          # Ajusta la versión según lo que requiera tu Angular CLI
+          node-version: '20'
 
-      - name: 📚 Instalar dependencias
-        run: npm install
+      # Instala dependencias en modo CI.
+      - name: Install dependencies
+        run: npm ci
 
-      - name: 🚀 Instalar Angular CLI globalmente
-        run: npm install -g @angular/cli
+      # Compila el proyecto Angular.
+      - name: Build Angular project
+        run: npx ng build --configuration production
 
-      - name: 🔧 Agregar node_modules/.bin al PATH
-        run: echo "$(pwd)/node_modules/.bin" >> $GITHUB_PATH
-
-      - name: 🏗️ Compilar aplicación Angular
-        run: npx ng build --configuration=production
-
-      - name: 📦 Transferir archivos al servidor EC2
-        uses: appleboy/scp-action@v0.1.8
+      # **Método 1: Usar SCP**
+      - name: Upload build artifacts via SCP
+        uses: appleboy/scp-action@master  # Asegurar que está actualizado
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "dist/mi-aplicacion-angular/**"
-          target: "/var/www/html/mi-aplicacion-angular/"
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          source: "dist/hola-mundo/browser/*"
+          target: "${{ secrets.REMOTE_PATH }}"
 
-      - name: 🔄 Reiniciar servicio web en EC2 (si es necesario)
-        uses: appleboy/ssh-action@v0.1.8
+      # **Si SCP falla, usar Rsync como alternativa**
+      - name: Upload build artifacts via Rsync (Fallback)
+        uses: appleboy/ssh-action@master
+        if: failure()  # Solo ejecuta si SCP falla
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
           script: |
-            # (Opcional) Reinicia Nginx u otro servicio para servir la nueva versión
+            rsync -avz dist/hola-mundo/browser/ ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }}
+
+      # Corre comandos remotos por SSH (ejemplo para Nginx).
+      - name: Run remote commands to deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          script: |
+            sudo rm -rf /var/www/html/*
+            sudo cp -r ${{ secrets.REMOTE_PATH }}/* /var/www/html/
             sudo systemctl restart nginx
