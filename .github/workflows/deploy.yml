@@ -18,18 +18,18 @@ jobs:
         with:
           node-version: '20'
 
-      # 🔥 Limpiar e instalar dependencias correctamente
+      # 🔥 Limpieza y reinstalación de dependencias
       - name: Clean and install dependencies
         run: |
           rm -rf node_modules package-lock.json
           npm install --legacy-peer-deps
           npm install -g @angular/cli
 
-      # 🔥 Construir Angular asegurando la generación correcta de archivos
+      # 🔥 Construcción del proyecto Angular
       - name: Build Angular project
         run: npx ng build --configuration production
 
-      # 🔥 Subir el contenido generado directamente a la instancia EC2
+      # 🔥 Subir artefactos por SCP a la instancia EC2
       - name: Upload build artifacts via SCP
         uses: appleboy/scp-action@master
         with:
@@ -38,9 +38,9 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 22
           source: "dist/hola-mundo/browser/*"
-          target: "/home/ubuntu/deploy/"
+          target: "${{ secrets.REMOTE_PATH }}"
 
-      # 🔥 Copiar los archivos a la carpeta correcta y reiniciar Nginx
+      # 🔥 Configurar el servidor y aplicar permisos automáticamente
       - name: Run remote commands to deploy via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -49,20 +49,15 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 22
           script: |
-            echo "📂 Verificando archivos en /home/ubuntu/deploy/"
-            ls -lah /home/ubuntu/deploy/
+            # Mover archivos desde la carpeta generada a /var/www/html/
+            sudo cp -r /var/www/html/dist/hola-mundo/browser/* /var/www/html/
 
-            echo "🗑 Limpiando /var/www/html/..."
-            sudo rm -rf /var/www/html/*
+            # Eliminar carpeta dist innecesaria
+            sudo rm -rf /var/www/html/dist
 
-            echo "🚀 Moviendo archivos a /var/www/html/"
-            sudo cp -r /home/ubuntu/deploy/* /var/www/html/
-
-            echo "🔑 Ajustando permisos en /var/www/html/"
+            # Aplicar permisos correctos
             sudo chown -R www-data:www-data /var/www/html/
             sudo chmod -R 755 /var/www/html/
 
-            echo "🔄 Reiniciando Nginx..."
+            # Reiniciar Nginx para aplicar los cambios
             sudo systemctl restart nginx
-
-            echo "✅ Despliegue exitoso 🚀"
